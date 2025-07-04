@@ -1,20 +1,34 @@
 package aut.milou.model;
 
+import jakarta.persistence.*;
 import java.util.Objects;
 
+@Entity
+@Table(name = "users")
 public class User {
-    private final String name;
-    private final String email;
-    private final String password;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false, length = 250)
+    private String password;
+
+    public User() {}
 
     public User(String name ,String email ,String password) {
-        if (! email.contains("@milou.com"))
-            email += "@milou.com";
         this.name = name;
         this.email = email;
         this.password = password;
     }
 
+    public Long getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }
     public String getPassword() { return password; }
@@ -23,10 +37,10 @@ public class User {
     public boolean equals(Object o) {
         if (this == o)
             return true;
-        if (!(o instanceof aut.milou.model.User))
+        if (!(o instanceof User))
             return false;
 
-        aut.milou.model.User user = (aut.milou.model.User) o;
+        User user = (User) o;
         return email.equalsIgnoreCase(user.email);
     }
 

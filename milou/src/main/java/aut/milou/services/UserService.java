@@ -1,53 +1,61 @@
 package aut.milou.services;
 
 import aut.milou.model.User;
+import aut.milou.Repository.UserRepository;
+import org.mindrot.jbcrypt.BCrypt;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
+import java.util.logging.Logger;
 
 public class UserService {
-    private final List<User> users = new ArrayList<>();
+    private static final Logger logger = Logger.getLogger(UserService.class.getName());
+    private final UserRepository userRepository;
 
-    public boolean register(String name, String email, String password) {
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    public boolean register(String name ,String email ,String password) {
         email = normalizeEmail(email);
-
-        if (findUserByEmail(email) != null) {
-            System.out.println("This email is already taken. Please try again.");
+        Optional<User> existingUser = userRepository.findByEmail(email);
+        if (existingUser.isPresent()) {
+            logger.warning("Attempt to register with taken email: " + email);
             return false;
         }
-        if (!Password.isValid(password)) {
-            System.out.println("password must be at least 8 characters long.");
+        if (!isPasswordValid(password)) {
+            logger.warning("Invalid password for email: " + email);
             return false;
         }
 
-        User user = new User(name, email, password);
-        users.add(user);
-        System.out.println("Your new account is created.\nGo ahead and login!");
+        String hashedPassword = BCrypt.hashpw(password ,BCrypt.gensalt());
+        User user = new User(name ,email ,hashedPassword);
+        userRepository.save(user);
+        logger.info("User registered successfully: " + email);
         return true;
     }
 
-    public User login(String email, String password) {
+    public User login(String email ,String password) {
         email = normalizeEmail(email);
-        User user = findUserByEmail(email);
-
-        if (user == null) {
-            System.out.println("User not found.");
+        Optional<User> user = userRepository.findByEmail(email);
+        if (user.isEmpty()) {
+            logger.warning("Login attempt with non-existent email: " + email);
             return null;
         }
-        if (!user.getPassword().equals(password)) {
-            System.out.println("Invalid password.");
+        if (!BCrypt.checkpw(password ,user.get().getPassword())) {
+            logger.warning("Invalid password for email: " + email);
             return null;
         }
 
-        return user;
+        logger.info("User logged in: " + email);
+        return user.get();
     }
 
-    private User findUserByEmail(String email) {
-        for (User user : users) {
-            if (user.getEmail().equalsIgnoreCase(email))
-                return user;
-        }
-        return null;
+    public boolean isEmailTaken(String email) {
+        return userRepository.findByEmail(normalizeEmail(email)).isPresent();
+    }
+
+    public boolean isPasswordValid(String password) {
+        return password != null && password.length() >= 8;
     }
 
     private String normalizeEmail(String email) {

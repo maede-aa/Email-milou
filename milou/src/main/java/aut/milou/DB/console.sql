@@ -1,0 +1,27 @@
+CREATE DATABASE IF NOT EXISTS milou;
+USE milou;
+
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE emails (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(6) NOT NULL UNIQUE,
+    sender_id BIGINT NOT NULL,
+    subject VARCHAR(100),
+    body TEXT,
+    date DATETIME,
+    is_read BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (sender_id) REFERENCES users(id)
+);
+
+CREATE TABLE recipients (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email_id BIGINT,
+    recipient_email VARCHAR(100),
+    FOREIGN KEY (email_id) REFERENCES emails(id) ON DELETE CASCADE
+);
