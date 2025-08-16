@@ -8,7 +8,6 @@ import java.util.Optional;
 import java.util.logging.Logger;
 
 public class UserService {
-    private static final Logger logger = Logger.getLogger(UserService.class.getName());
     private final UserRepository userRepository;
 
     public UserService(UserRepository userRepository) {
@@ -17,36 +16,24 @@ public class UserService {
 
     public boolean register(String name ,String email ,String password) {
         email = normalizeEmail(email);
-        Optional<User> existingUser = userRepository.findByEmail(email);
-        if (existingUser.isPresent()) {
-            logger.warning("Attempt to register with taken email: " + email);
+        if (userRepository.findByEmail(email).isPresent()) {
             return false;
         }
         if (!isPasswordValid(password)) {
-            logger.warning("Invalid password for email: " + email);
             return false;
         }
-
-        String hashedPassword = BCrypt.hashpw(password ,BCrypt.gensalt());
-        User user = new User(name ,email ,hashedPassword);
+        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+        User user = new User(name, email, hashedPassword);
         userRepository.save(user);
-        logger.info("User registered successfully: " + email);
         return true;
     }
 
     public User login(String email ,String password) {
         email = normalizeEmail(email);
         Optional<User> user = userRepository.findByEmail(email);
-        if (user.isEmpty()) {
-            logger.warning("Login attempt with non-existent email: " + email);
+        if (user.isEmpty() || !BCrypt.checkpw(password, user.get().getPassword()))
             return null;
-        }
-        if (!BCrypt.checkpw(password ,user.get().getPassword())) {
-            logger.warning("Invalid password for email: " + email);
-            return null;
-        }
 
-        logger.info("User logged in: " + email);
         return user.get();
     }
 
@@ -59,6 +46,9 @@ public class UserService {
     }
 
     private String normalizeEmail(String email) {
-        return email.contains("@") ? email : email + "@milou.com";
+        if (email == null)
+            return null;
+        String trimmed = email.trim().toLowerCase();
+        return trimmed.contains("@") ? trimmed : trimmed + "@milou.com";
     }
 }

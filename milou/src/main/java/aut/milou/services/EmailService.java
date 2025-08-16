@@ -1,4 +1,4 @@
-package aut.milou.services;
+ package aut.milou.services;
 
 import aut.milou.model.Email;
 import aut.milou.model.Recipient;
@@ -24,14 +24,15 @@ public class EmailService {
     }
 
     public String send(String senderEmail, List<String> recipients, String subject, String body) {
-        senderEmail = normalizeEmail(senderEmail);
-        Optional<User> sender = userRepository.findByEmail(senderEmail);
-        if (sender.isEmpty()) {
-            logger.warning("Sender not found: " + senderEmail);
+        if(senderEmail == null) {
             throw new IllegalArgumentException("Sender not found.");
         }
 
-        List<String> normalizedRecipients = recipients.stream().map(this::normalizeEmail).filter(recipient -> userRepository.findByEmail(recipient).isPresent()).collect(Collectors.toList());
+        senderEmail = normalizeEmail(senderEmail);
+        Optional<User> sender = userRepository.findByEmail(senderEmail);
+        if (sender.isEmpty()) {
+            throw new IllegalArgumentException("Sender not found.");
+        }
 
         if (normalizedRecipients.isEmpty()) {
             logger.warning("No valid recipients for sender: " + senderEmail);
@@ -44,40 +45,47 @@ public class EmailService {
         Email email = new Email(code, sender.get(), recipientEntities, subject, body, new Date(), false);
         recipientEntities.forEach(recipient -> recipient.setEmail(email));
         emailRepository.save(email);
-        logger.info("Email sent with code: " + code + " by " + senderEmail);
         return code;
+    }
+    private List<String> normalizeRecipients(List<String> recipients) {
+        if (recipients == null || recipients.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String email : recipients) {
+            if (email != null) {
+                String norm = normalizeEmail(email.trim());
+                if (norm != null && userRepository.findByEmail(norm).isPresent() && !normalized.contains(norm)) {
+                    normalized.add(norm);
+                }
+            }
+        }
+        return normalized;
     }
 
     public String reply(String senderEmail, String originalCode, String body) {
         senderEmail = normalizeEmail(senderEmail);
         Optional<Email> original = emailRepository.findByCode(originalCode);
         if (original.isEmpty() || !canAccessEmail(senderEmail, original.get())) {
-            logger.warning("Unauthorized reply attempt by " + senderEmail + " for code: " + originalCode);
             throw new IllegalArgumentException("You cannot reply to this email.");
         }
 
-        Set<String> allRecipients = new HashSet<>(original.get().getRecipients().stream().map(Recipient::getRecipientEmail).collect(Collectors.toList()));
+        Set<String> allRecipients = original.get().getRecipients().stream().map(Recipient::getRecipientEmail).collect(Collectors.toSet());
         allRecipients.add(original.get().getSender().getEmail());
         allRecipients.remove(senderEmail);
 
         String subject = "[Re] " + original.get().getSubject();
-        String replyCode = send(senderEmail, new ArrayList<>(allRecipients), subject, body);
-        logger.info("Reply sent with code: " + replyCode + " for original code: " + originalCode);
-        return replyCode;
+        return send(senderEmail, new ArrayList<>(allRecipients), subject, body);
     }
 
     public String forward(String senderEmail, String originalCode, List<String> newRecipients) {
         senderEmail = normalizeEmail(senderEmail);
         Optional<Email> original = emailRepository.findByCode(originalCode);
-        if (original.isEmpty() || !canAccessEmail(senderEmail, original.get())) {
-            logger.warning("Unauthorized forward attempt by " + senderEmail + " for code: " + originalCode);
+        if (original.isEmpty() || !canAccessEmail(senderEmail, original.get()))
             throw new IllegalArgumentException("You cannot forward this email.");
-        }
 
         String subject = "[Fw] " + original.get().getSubject();
-        String forwardCode = send(senderEmail, newRecipients, subject, original.get().getBody());
-        logger.info("Email forwarded with code: " + forwardCode + " for original code: " + originalCode);
-        return forwardCode;
+        return send(senderEmail, newRecipients, subject, original.get().getBody());
     }
 
     public List<Email> getAllReceivedEmails(String userEmail) {
@@ -92,36 +100,43 @@ public class EmailService {
         return emailRepository.findSent(normalizeEmail(userEmail));
     }
 
-    public Email readEmail(String userEmail, String code) {
+    public Email readEmail(String userEmail ,String code) {
         userEmail = normalizeEmail(userEmail);
         Optional<Email> email = emailRepository.findByCode(code);
         if (email.isEmpty() || !canAccessEmail(userEmail, email.get())) {
-            logger.warning("Unauthorized read attempt by " + userEmail + " for code: " + code);
             throw new IllegalArgumentException("You cannot read this email.");
         }
-        email.get().setIsRead(true);
-        emailRepository.update(email.get());
-        logger.info("Email read with code: " + code + " by " + userEmail);
+        emailRepository.markRecipientRead(email.get().getId(), userEmail);
         return email.get();
     }
 
     private boolean canAccessEmail(String userEmail, Email email) {
-        return email.getSender().getEmail().equals(userEmail) || email.getRecipients().stream().anyMatch(recipient -> recipient.getRecipientEmail().equals(userEmail));
+        if (userEmail == null || email == null)
+            return false;
+
+        boolean senderMatch = email.getSender() != null && userEmail.equals(email.getSender().getEmail());
+        boolean recipientMatch = email.getRecipients() != null && email.getRecipients().stream().anyMatch(recipient -> userEmail.equals(recipient.getRecipientEmail()));
+        return senderMatch || recipientMatch;
     }
 
     private String generateUniqueCode() {
         SecureRandom random = new SecureRandom();
-        StringBuilder code = new StringBuilder();
-        do {
-            code.setLength(0);
-            for (int i = 0; i < CODE_LENGTH; i++) {
-                code.append(CHARS.charAt(random.nextInt(CHARS.length())));
-            }
-        } while (emailRepository.findByCode(code.toString()).isPresent());
-        return code.toString();
+        int maxAttempts = 100;
+        for (int attempt = 0 ; attempt < maxAttempts ; attempt++) {
+            StringBuilder sb = new StringBuilder(CODE_LENGTH);
+            for (int i = 0; i < CODE_LENGTH; i++)
+                sb.append(CHARS.charAt(random.nextInt(CHARS.length())));
+            String code = sb.toString();
+            if (emailRepository.findByCode(code).isEmpty())
+                return code;
+        }
+        throw new RuntimeException("Failed to generate unique code after " + maxAttempts + " attempts.");
     }
 
     private String normalizeEmail(String email) {
-        return email.contains("@") ? email : email + "@milou.com";
+        if(email == null)
+            return null;
+        String trimmed = email.trim().toLowerCase();
+        return trimmed.contains("@") ? trimmed : trimmed + "@milou.com";
     }
 }

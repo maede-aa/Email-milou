@@ -11,7 +11,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Processor {
-    private static final Logger logger = Logger.getLogger(Processor.class.getName());
     private final Scanner scn = new Scanner(System.in);
     private final UserController userController;
     private final EmailController emailController;
@@ -22,243 +21,209 @@ public class Processor {
         this.emailController = emailController;
     }
 
-    public void start() {
-        while (true) {
+public void start() {
+    while (true) {
+        try {
             if (currentUser == null) {
-                System.out.print("[L]ogin ,[S]ign up: ");
-                String input = scn.nextLine().trim().toLowerCase();
-                try {
-                    if (input.equals("l") || input.equals("login")) {
-                        handleLogin();
-                    } else if (input.equals("s") || input.equals("sign up")) {
-                        handleSignup();
-                    } else {
-                        System.out.println("Invalid command.");
-                    }
-                } catch (Exception e) {
-                    logger.severe("Error in start: " + e.getMessage());
-                    System.out.println("An error occurred: " + e.getMessage());
+                System.out.print("[L]ogin, [S]ign up : ");
+                String cmd = scanner.nextLine().trim();
+                if (cmd.equalsIgnoreCase("L") || cmd.equalsIgnoreCase("Login")) {
+                    doLogin();
+                } else if (cmd.equalsIgnoreCase("S") || cmd.equalsIgnoreCase("Sign up") || cmd.equalsIgnoreCase("Signup")) {
+                    doSignUp();
+                } else {
+                    System.out.println("Invalid command. Please enter [L] for Login or [S] for Sign up.");
                 }
             } else {
-                handleMainMenu();
+                System.out.print("[S]end, [V]iew, [R]eply, [F]orward, [L]ogout: ");
+                String cmd = scanner.nextLine().trim();
+                if (cmd.equalsIgnoreCase("S") || cmd.equalsIgnoreCase("Send")) {
+                    doSend();
+                } else if (cmd.equalsIgnoreCase("V") || cmd.equalsIgnoreCase("View")) {
+                    doView();
+                } else if (cmd.equalsIgnoreCase("R") || cmd.equalsIgnoreCase("Reply")) {
+                    doReply();
+                } else if (cmd.equalsIgnoreCase("F") || cmd.equalsIgnoreCase("Forward")) {
+                    doForward();
+                } else if (cmd.equalsIgnoreCase("L") || cmd.equalsIgnoreCase("Logout")) {
+                    currentUser = null;
+                    System.out.println("Logged out successfully.");
+                } else {
+                    System.out.println("invalid command. Please enter one of : [S]end, [V]iew, [R]eply, [F]orward, [L]ogout.");
+                }
             }
+        } catch (Exception ex) {
+            System.out.println("an unexpected error occurred: " + ex.getMessage());
         }
-    }
+    }}
 
-    private void handleSignup() {
+    private void doSignup() {
         System.out.print("Name: ");
-        String name = scn.nextLine().trim();
+        String name = scn.nextLine();
         System.out.print("Email: ");
-        String email = scn.nextLine().trim();
+        String email = scn.nextLine();
         System.out.print("Password: ");
-        String password = scn.nextLine().trim();
+        String password = scn.nextLine();
 
-        try {
-            String result = userController.signUp(name ,email ,password);
-            System.out.println(result);
-        } catch (Exception e) {
-            logger.severe("Signup error: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
-        }
+        String result = userController.signUp(name ,email ,password);
+        System.out.println(result);
     }
 
-    private void handleLogin() {
+    private void doLogin() {
         System.out.print("Email: ");
         String email = scn.nextLine().trim();
         System.out.print("Password: ");
-        String password = scn.nextLine().trim();
+        String password = scn.nextLine();
 
-        try {
-            User user = userController.login(email ,password);
-            if (user != null) {
-                currentUser = user;
-                System.out.println("Welcome back ," + user.getName() + "!");
-                showUnreadEmails();
-            } else {
-                System.out.println("Invalid credentials.");
-            }
-        } catch (Exception e) {
-            logger.severe("Login error: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
+        User user = userController.login(email, password);
+        if (user == null) {
+            System.out.println("Login failed. Invalid email or password.");
+        } else {
+            this.currentUser = user;
+            System.out.println("welcome back , " + capitalize(user.getName()) + "!");
+            showUnreadList();
         }
     }
 
     private void showUnreadEmails() {
-        try {
-            List<Email> unread = emailController.viewUnread(currentUser.getEmail());
-            if (unread.isEmpty()) {
-                System.out.println("No unread emails.");
-                return;
-            }
-            System.out.println("Unread Emails:");
-            printEmails(unread);
-        } catch (Exception e) {
-            logger.severe("Error showing unread emails: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
+        List<Email> unread = emailController.viewUnread(currentUser.getEmail());
+        System.out.println("\nUnread Emails:");
+        System.out.println(unread.size() + " unread emails:");
+        for (Email e : unread) {
+            String from = e.getSender() != null ? e.getSender().getEmail() : "unknown";
+            System.out.println("+ " + from + " - " + e.getSubject() + " (" + e.getCode() + ")");
         }
+        System.out.println()
     }
 
-    private void handleMainMenu() {
-        System.out.print("[S]end ,[V]iew ,[R]eply ,[F]orward ,[L]ogout: ");
-        String command = scn.nextLine().trim().toLowerCase();
-
-        try {
-            switch (command) {
-                case "s":
-                case "send":
-                    handleSend();
-                    break;
-                case "v":
-                case "view":
-                    handleView();
-                    break;
-                case "r":
-                case "reply":
-                    handleReply();
-                    break;
-                case "f":
-                case "forward":
-                    handleForward();
-                    break;
-                case "l":
-                case "logout":
-                    currentUser = null;
-                    System.out.println("Logged out successfully.");
-                    break;
-                default:
-                    System.out.println("Invalid command.");
-            }
-        } catch (Exception e) {
-            logger.severe("Error in main menu: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
-        }
-    }
-
-    private String readMultiLineBody() {
-        System.out.println("Body (end with a single . on a new line):");
-        StringBuilder body = new StringBuilder();
-        String line;
-        while (!(line = scn.nextLine()).equals(".")) {
-            body.append(line).append("\n");
-        }
-        return body.toString().trim();
-    }
-
-    private void handleSend() {
+    private void doSend() {
         System.out.print("Recipient(s): ");
-        String recipientInput = scn.nextLine().trim();
-        List<String> recipients = Arrays.stream(recipientInput.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
-
-        System.out.print("Subject: ");
-        String subject = scn.nextLine().trim();
-
-        String body = readMultiLineBody();
-
-        try {
-            String code = emailController.sendEmail(currentUser.getEmail() ,recipients ,subject ,body);
-            System.out.println("Successfully sent your email.");
-            System.out.println("Code: " + code);
-        } catch (Exception e) {
-            logger.severe("Send error: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
-        }
-    }
-
-    private void handleView() {
-        System.out.print("[A]ll emails ,[U]nread emails ,[S]ent emails ,Read by [C]ode: ");
-        String option = scn.nextLine().trim().toLowerCase();
-
-        try {
-            switch (option) {
-                case "a":
-                case "all":
-                    printEmails(emailController.viewAll(currentUser.getEmail()));
-                    break;
-                case "u":
-                case "unread":
-                    printEmails(emailController.viewUnread(currentUser.getEmail()));
-                    break;
-                case "s":
-                case "sent":
-                    printEmails(emailController.viewSent(currentUser.getEmail()));
-                    break;
-                case "c":
-                case "code":
-                    handleReadByCode();
-                    break;
-                default:
-                    System.out.println("Invalid view option.");
-            }
-        } catch (Exception e) {
-            logger.severe("view error: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
-        }
-    }
-
-    private void handleReadByCode() {
-        System.out.print("Code: ");
-        String code = scn.nextLine().trim();
-        try {
-            Email email = emailController.readEmail(currentUser.getEmail() ,code);
-            if (email != null) {
-                String recipients = email.getRecipients().stream()
-                        .map(Recipient::getRecipientEmail)
-                        .collect(Collectors.joining(" ,"));
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                System.out.println("code: " + email.getCode());
-                System.out.println("recipients: " + recipients);
-                System.out.println("subject: " + email.getSubject());
-                System.out.println("Date: " + sdf.format(email.getDate()));
-                System.out.println();
-                System.out.println(email.getBody());
-            }
-        } catch (Exception e) {
-            logger.severe("Read error: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
-        }
-    }
-
-    private void handleReply() {
-        System.out.print("Code: ");
-        String code = scn.nextLine().trim();
-        String body = readMultiLineBody();
-
-        try {
-            String replyCode = emailController.reply(currentUser.getEmail() ,code ,body);
-            System.out.println("successfully sent your reply to email " + code );
-            System.out.println("Code: " + replyCode);
-        } catch (Exception e) {
-            logger.severe("Reply error: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
-        }
-    }
-
-    private void handleForward() {
-        System.out.print("Code: ");
-        String code = scn.nextLine().trim();
-        System.out.print("Recipients: ");
-        String recipientInput = scn.nextLine().trim();
-        List<String> recipients = Arrays.stream(recipientInput.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
-
-        try {
-            String forwardCode = emailController.forward(currentUser.getEmail() ,code ,recipients);
-            System.out.println("Successfully forwarded your email.");
-            System.out.println("Code: " + forwardCode);
-        } catch (Exception e) {
-            logger.severe("Forward error: " + e.getMessage());
-            System.out.println("Error: " + e.getMessage());
-        }
-    }
-
-    private void printEmails(List<Email> emails) {
-        if (emails.isEmpty()) {
-            System.out.println("No emails found.");
+        String r = scanner.nextLine();
+        List<String> recipients = Arrays.stream(r.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+        f (recipients.isEmpty()) {
+            System.out.println("Please enter at least one recipient.");
             return;
         }
-
-        for (Email email : emails) {
-            String prefix = email.getSender().getEmail().equals(currentUser.getEmail()) ? email.getRecipients().stream().map(Recipient::getRecipientEmail).collect(Collectors.joining(" ,")) : email.getSender().getEmail();
-            System.out.println("+ " + prefix + " - " + email.getSubject() + " (" + email.getCode() + ")");
+        System.out.print("Subject: ");
+        String subject = scanner.nextLine();
+        System.out.print("Body: ");
+        String body = scanner.nextLine();
+        try {
+            String code = emailController.sendEmail(currentUser.getEmail(), recipients, subject, body);
+            System.out.println("Successfully sent your email.\nCode: " + code);
+        } catch (Exception ex) {
+            System.out.println("Failed to send email: " + ex.getMessage());
         }
+    }
+
+    private void doView() {
+        System.out.print("[A]ll emails, [U]nread emails, [S]ent emails, Read by [C]ode: ");
+        String cmd = scanner.nextLine().trim();
+        if (cmd.equalsIgnoreCase("A")) {
+            List<Email> all = emailController.viewAll(currentUser.getEmail());
+            System.out.println("All Emails:");
+            printEmailList(all, false);
+        } else if (cmd.equalsIgnoreCase("U")) {
+            List<Email> unread = emailController.viewUnread(currentUser.getEmail());
+            System.out.println("Unread Emails:");
+            printEmailList(unread, false);
+        } else if (cmd.equalsIgnoreCase("S")) {
+            List<Email> sent = emailController.viewSent(currentUser.getEmail());
+            System.out.println("Sent Emails:");
+            printEmailList(sent, true);
+        } else if (cmd.equalsIgnoreCase("C")) {
+            System.out.print("Code: ");
+            String code = scanner.nextLine().trim();
+            if (code.isEmpty()) {
+                System.out.println("Code cannot be empty.");
+                return;
+            }
+            try {
+                Email email = emailController.readEmail(currentUser.getEmail(), code);
+                printFullEmail(email);
+            } catch (Exception ex) {
+                System.out.println(ex.getMessage());
+            }
+        } else {
+            System.out.println("Invalid option. Please enter A, U, S, or C.");
+        }
+    }
+
+    private void doReply() {
+        System.out.print("Code: ");
+        String code = scanner.nextLine().trim();
+        if (code.isEmpty()) {
+            System.out.println("Code cannot be empty.");
+            return;
+        }
+        System.out.print("Body: ");
+        String body = scanner.nextLine();
+        if (body.isEmpty()) {
+            System.out.println("Body cannot be empty.");
+            return;
+        }
+        try {
+            String newCode = emailController.reply(currentUser.getEmail(), code, body);
+            System.out.println("Successfully sent your reply to email " + code + ".\nCode: " + newCode);
+        } catch (Exception ex) {
+            System.out.println("Failed to reply: " + ex.getMessage());
+        }
+    }
+
+    private void doForward() {
+        System.out.print("Code: ");
+        String code = scanner.nextLine().trim();
+        if (code.isEmpty()) {
+            System.out.println("Code cannot be empty.");
+            return;
+        }
+        System.out.print("Recipient(s): ");
+        String r = scanner.nextLine();
+        List<String> recipients = Arrays.stream(r.split(",")) .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+        if (recipients.isEmpty()) {
+            System.out.println("Please enter at least one recipient.");
+            return;
+        }
+        try {
+            String newCode = emailController.forward(currentUser.getEmail(), code, recipients);
+            System.out.println("Successfully forwarded your email.\nCode: " + newCode);
+        } catch (Exception ex) {
+            System.out.println("Failed to forward: " + ex.getMessage());
+        }
+    }
+
+    private void printEmailList(List<Email> list, boolean isSent) {
+        if (list.isEmpty()) {
+            System.out.println("No emails.");
+            return;
+        }
+        for (Email e : list) {
+            if (isSent) {
+                String to = String.join(", ", e.getRecipients().stream().map(Recipient::getRecipientEmail).toList());
+                System.out.println("+ " + to + " - " + e.getSubject() + " (" + e.getCode() + ")");
+            } else {
+                String from = e.getSender() != null ? e.getSender().getEmail() : "unknown";
+                System.out.println("+ " + from + " - " + e.getSubject() + " (" + e.getCode() + ")");
+            }
+        }
+        System.out.println();
+    }
+
+    private void printFullEmail(Email e) {
+        System.out.println("Code: " + e.getCode());
+        String recipients = e.getRecipients().stream().map(Recipient::getRecipientEmail) .collect(Collectors.joining(", "));
+        System.out.println("Recipient(s): " + recipients);
+        System.out.println("Subject: " + e.getSubject());
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        System.out.println("Date: " + sdf.format(e.getDate()));
+        System.out.println();
+        System.out.println(e.getBody());
+        System.out.println();
+    }
+
+    private String capitalize(String s) {
+        if (s == null || s.isEmpty())
+            return "";
+        return s.substring(0, 1).toUpperCase() + s.substring(1);
     }
 }

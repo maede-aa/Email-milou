@@ -19,7 +19,7 @@ public class Email {
     private User sender;
 
     @OneToMany(mappedBy = "email" ,cascade = CascadeType.ALL ,orphanRemoval = true)
-    private List<Recipient> recipients = new ArrayList<>();
+    private List<Recipient> recipients;
 
     @Column(length = 100)
     private String subject;
@@ -29,9 +29,6 @@ public class Email {
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date date;
-
-    @Column(name = "is_read")
-    private boolean isRead;
 
     public Email() {}
 
@@ -44,8 +41,7 @@ public class Email {
         this.recipients = recipients;
         this.subject = subject;
         this.body = body;
-        this.date = date;
-        this.isRead = isRead;
+        this.date = date != null ? date : new Date();
     }
 
     public Long getId() { return id; }
@@ -55,6 +51,4 @@ public class Email {
     public String getSubject() { return subject; }
     public String getBody() { return body; }
     public Date getDate() { return date; }
-    public boolean isRead() { return isRead; }
-    public void setIsRead(boolean read) { isRead = read; }
 }

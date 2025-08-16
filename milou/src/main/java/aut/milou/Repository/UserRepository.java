@@ -11,7 +11,9 @@ public class UserRepository {
 
     public void save(User user) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            Transaction tx = session.beginTransaction();session.persist(user);tx.commit();
+            Transaction tx = session.beginTransaction();
+            session.persist(user);
+            tx.commit();
         }
     }
 

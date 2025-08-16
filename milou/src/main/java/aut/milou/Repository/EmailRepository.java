@@ -13,7 +13,9 @@ public class EmailRepository {
 
     public void save(Email email) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            Transaction tx = session.beginTransaction();session.persist(email);tx.commit();
+            Transaction tx = session.beginTransaction();
+            session.persist(email);
+            tx.commit();
         }
     }
 
@@ -43,7 +45,18 @@ public class EmailRepository {
 
     public void update(Email email) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            Transaction tx = session.beginTransaction();session.merge(email);tx.commit();
+            Transaction tx = session.beginTransaction();
+            session.merge(email);
+            tx.commit();
         }
     }
+
+    public void markRecipientRead(Long emailId, String recipientEmail) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Transaction tx = session.beginTransaction();
+            session.createQuery("UPDATE Recipient r SET r.isRead = true WHERE r.email.id = :emailId AND r.recipientEmail = :recipientEmail").setParameter("emailId", emailId).setParameter("recipientEmail", recipientEmail).executeUpdate();
+            tx.commit();
+        }
+    }
+
 }

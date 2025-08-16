@@ -11,22 +11,26 @@ public class UserController {
     }
 
     public String signUp(String name ,String email ,String password) {
-        if (name == null || name.isEmpty()) {
+        if (name == null || name.trim().isEmpty())
             return "Name cannot be empty.";
-        }
-        if (email == null || email.isEmpty()) {
+        if (email == null || email.trim().isEmpty())
             return "Email cannot be empty.";
-        }
-        if (password == null || password.isEmpty()) {
+        if (password == null || password.isEmpty())
             return "Password cannot be empty.";
+
+        boolean registered = userService.register(name ,email ,password);
+        if (registered) {
+            return "Your new account is created.\nGo ahead and login!";
+        } else if (userService.isEmailTaken(email)) {
+            return "This email is already taken.";
+        } else {
+            return "Password must be at least 8 characters.";
         }
-        return userService.register(name ,email ,password) ? "Your new account is created.\nGo ahead and login!" : userService.isEmailTaken(email) ? "This email is already taken." : "Password must be at least 8 characters.";
     }
 
     public User login(String email ,String password) {
-        if (email == null || email.isEmpty() || password == null || password.isEmpty())
+        if (email == null || email.trim().isEmpty() || password == null || password.isEmpty())
             return null;
-
         return userService.login(email ,password);
     }
 }

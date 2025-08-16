@@ -28,6 +28,19 @@ public class User {
         this.password = password;
     }
 
+    @PrePersist
+    @PreUpdate
+    private void normalize() {
+        if(this.email != null)
+            this.email = this.email.trim().toLowerCase();
+        if (this.name != null)
+            this.name = this.name.trim();
+        if (this.password != null)
+            this.password = this.password.trim();
+        if (this.name == null || this.name.isEmpty())
+            throw new IllegalArgumentException("name cannot be empty.");
+    }
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }
@@ -41,6 +54,8 @@ public class User {
             return false;
 
         User user = (User) o;
+        if (this.email == null || user.email == null)
+            return false;
         return email.equalsIgnoreCase(user.email);
     }
 
