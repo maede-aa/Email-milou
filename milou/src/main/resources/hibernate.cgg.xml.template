@@ -10,7 +10,7 @@
         com.mysql.cj.jdbc.Driver
         </property>
         <property name="hibernate.connection.url">
-        jdbc:mysql://localhost:3306/YOUR_DATABASE_NAME
+        jdbc:mysql://localhost:3306/milou
         </property>
         <property name="hibernate.connection.username">
         YOUR_USERNAME
@@ -26,8 +26,8 @@
         <property name="hibernate.format_sql">true</property>
 
         <!-- Annotated entity classes -->
-        <mapping class="model.User"/>
-        <mapping class="model.Email"/>
-        <mapping class="model.Recipient"/>
+        <mapping class="aut.milou.model.User"/>
+        <mapping class="aut.milou.model.Email"/>
+        <mapping class="aut.milou.model.Recipient"/>
     </session-factory>
 </hibernate-configuration>

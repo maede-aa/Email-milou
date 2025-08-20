@@ -5,7 +5,7 @@ import aut.milou.Repository.UserRepository;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.Optional;
-import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 public class UserService {
     private final UserRepository userRepository;
@@ -14,40 +14,35 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public boolean register(String name ,String email ,String password) {
+    public void register(String name, String email, String password) {
         email = normalizeEmail(email);
+        if (!isValidEmail(email)) {
+            throw new IllegalArgumentException("Invalid email.");
+        }
         if (userRepository.findByEmail(email).isPresent()) {
-            return false;
+            throw new IllegalArgumentException("This email is already taken.");
         }
-        if (!isPasswordValid(password)) {
-            return false;
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters.");
         }
-        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
-        User user = new User(name, email, hashedPassword);
+        String hashed = BCrypt.hashpw(password, BCrypt.gensalt());
+        User user = new User(name, email, hashed);
         userRepository.save(user);
-        return true;
     }
 
-    public User login(String email ,String password) {
+    public Optional<User> login(String email, String password) {
         email = normalizeEmail(email);
-        Optional<User> user = userRepository.findByEmail(email);
-        if (user.isEmpty() || !BCrypt.checkpw(password, user.get().getPassword()))
-            return null;
-
-        return user.get();
+        return userRepository.findByEmail(email)
+                .filter(u -> BCrypt.checkpw(password, u.getPassword()));
     }
 
-    public boolean isEmailTaken(String email) {
-        return userRepository.findByEmail(normalizeEmail(email)).isPresent();
-    }
-
-    public boolean isPasswordValid(String password) {
-        return password != null && password.length() >= 8;
+    private boolean isValidEmail(String email) {
+        if (email == null) return false;
+        return email.matches("^[\\w.-]+@milou\\.com$");
     }
 
     private String normalizeEmail(String email) {
-        if (email == null)
-            return null;
+        if (email == null) return null;
         String trimmed = email.trim().toLowerCase();
         return trimmed.contains("@") ? trimmed : trimmed + "@milou.com";
     }

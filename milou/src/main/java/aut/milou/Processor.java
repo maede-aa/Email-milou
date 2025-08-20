@@ -12,6 +12,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Processor {
     private final UserController userController;
@@ -33,7 +35,7 @@ public class Processor {
     private static final Border PANEL_BORDER = BorderFactory.createEmptyBorder(10 ,10 ,10 ,10);
     private static final Border BUTTON_BORDER = BorderFactory.createLineBorder(BUTTON_BLUE.darker() ,1 ,true);
 
-    public GuiProcessor(UserController userController ,EmailController emailController) {
+    public Processor(UserController userController ,EmailController emailController) {
         this.userController = userController;
         this.emailController = emailController;
     }

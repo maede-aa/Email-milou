@@ -1,4 +1,4 @@
- package aut.milou.services;
+package aut.milou.services;
 
 import aut.milou.model.Email;
 import aut.milou.model.Recipient;
@@ -34,6 +34,7 @@ public class EmailService {
             throw new IllegalArgumentException("Sender not found.");
         }
 
+        List<String> normalizedRecipients = normalizeRecipients(recipients);
         if (normalizedRecipients.isEmpty()) {
             logger.warning("No valid recipients for sender: " + senderEmail);
             throw new IllegalArgumentException("No valid recipients.");
@@ -42,11 +43,12 @@ public class EmailService {
         String code = generateUniqueCode();
         List<Recipient> recipientEntities = normalizedRecipients.stream().map(email -> new Recipient(email, null)).collect(Collectors.toList());
 
-        Email email = new Email(code, sender.get(), recipientEntities, subject, body, new Date(), false);
+        Email email = new Email(code ,sender.get() ,recipientEntities ,subject ,body ,new Date());
         recipientEntities.forEach(recipient -> recipient.setEmail(email));
         emailRepository.save(email);
         return code;
     }
+
     private List<String> normalizeRecipients(List<String> recipients) {
         if (recipients == null || recipients.isEmpty()) {
             return new ArrayList<>();

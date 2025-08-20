@@ -27,14 +27,14 @@ public class Recipient {
         if (!isValidEmail(normalized))
             throw new IllegalArgumentException("Invalid email format: " + recipientEmail);
 
-        this.recipientEmail = recipientEmail;
+        this.recipientEmail = normalized;
         this.email = email;
         this.isRead = false;
     }
 
     private boolean isValidEmail(String email) {
-    if (email == null) return false;
-    return email.matches("^[\w.-]+@milou\\.com$");
+        if (email == null) return false;
+        return email.matches("^[\\w.-]+@milou\\.com$");
     }
 
     private String normalizeEmail(String email) {

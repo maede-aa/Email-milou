@@ -18,20 +18,17 @@ public class UserController {
         if (password == null || password.isEmpty())
             return "Password cannot be empty.";
 
-        boolean registered = userService.register(name ,email ,password);
-        if (registered) {
+        try {
+            userService.register(name ,email ,password);
             return "Your new account is created.\nGo ahead and login!";
-        } else if (userService.isEmailTaken(email)) {
-            return "This email is already taken.";
-        } else {
-            return "Password must be at least 8 characters.";
+        } catch (IllegalArgumentException e) {
+            return e.getMessage();
         }
     }
 
     public User login(String email ,String password) {
         if (email == null || email.trim().isEmpty() || password == null || password.isEmpty())
             return null;
-        return userService.login(email ,password);
+        return userService.login(email ,password).orElse(null);
     }
 }
-

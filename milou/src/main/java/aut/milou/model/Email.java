@@ -32,7 +32,7 @@ public class Email {
 
     public Email() {}
 
-    public Email(String code ,User sender ,List<Recipient> recipients ,String subject ,String body ,Date date ,boolean isRead) {
+    public Email(String code ,User sender ,List<Recipient> recipients ,String subject ,String body ,Date date) {
         if (subject != null && subject.length() > 100) {
             throw new IllegalArgumentException("Subject must be under 100 characters.");
         }
